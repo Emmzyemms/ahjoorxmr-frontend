@@ -1,9 +1,20 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60, // 1 minute
+      retry: 1,
+    },
+  },
+});
 
 const CONSENT_STORAGE_KEY = "cookie-consent";
 const CONSENT_VERSION = 1;
@@ -241,15 +252,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useServiceWorker();
 
   return (
-    <ThemeProvider>
-      <DensityProvider>
-        <WalletProvider>
-          <ToastProvider>
-            {children}
-            <CookieConsent />
-          </ToastProvider>
-        </WalletProvider>
-      </DensityProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <DensityProvider>
+          <WalletProvider>
+            <ToastProvider>
+              {children}
+              <CookieConsent />
+            </ToastProvider>
+          </WalletProvider>
+        </DensityProvider>
+      </ThemeProvider>
+      {process.env.NODE_ENV === "development" && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
+    </QueryClientProvider>
   );
 }

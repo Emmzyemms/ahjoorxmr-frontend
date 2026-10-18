@@ -1,128 +1,148 @@
-# Ahjoor Frontend 
+# Ahjoor Frontend
 
-**Ahjoor** is a trustless community savings platform built with transparency in mind. This repository contains the frontend application, which provides real-time dashboards for savings groups to manage their circles, track contributions, and monitor payout status. It offers a user-friendly interface to interact with the Ahjoor platform, visualize round milestones, and keep every participant informed.
-
----
-
-## 💰 Overview of Frontend Functionalities
-
-The Ahjoor Frontend provides the following key features:
-
-* 📊 Real-time dashboards for group organizers and participants to track savings circle status.
-* 👁️ Visualization of immutable records of contributions, round history, and payout events stored on-chain.
-* 📈 Display of automated payout status triggered when all participants have contributed and the round duration has elapsed.
-* 📱 Responsive interface designed for optimal viewing and usability on all devices (mobile, tablet, desktop).
+**Ahjoor** is a trustless community savings platform built with transparency in mind. This repository contains the Next.js frontend application, which provides real-time dashboards for savings groups to manage their circles, track contributions, and monitor payout status.
 
 ---
 
-## ⚙️ Key Frontend Components
+## Features
 
-**Frontend Dashboard**
-React/Next.js interface for organizers and participants to track savings circle status in real time.
-
-**User Authentication Module**
-Handles wallet connection, session management, and participant verification.
-
-**Savings Circle View**
-Displays all active groups with their current round, contribution status, and next payout.
-
-**Detailed Circle View**
-Shows a comprehensive overview of a single group, including round history, participant contributions, and payout schedule.
-
-**Notification System**
-Provides real-time alerts for round completions, missed contributions, or upcoming payouts.
-
-**Payout History / Status**
-Displays a record of past payouts and their on-chain transaction details.
-
-**Organizer Dashboard**
-Specific views and functionalities for group organizers to manage circles and participants.
-
-**Participant Dashboard**
-Specific views for members to track their individual circle progress and contribution history.
+- **Savings Circles** — create and join rotating savings groups with configurable contribution amounts, durations, and privacy settings.
+- **Dashboard** — real-time overview of all your active circles, upcoming contributions, and pending payouts.
+- **Circle Detail** — per-circle view of round history, participant contributions, health score, and payout schedule.
+- **Contributions Timeline** — chronological log of every contribution across all circles with on-time/late/missed status.
+- **Payout History** — record of completed and pending payouts with on-chain transaction links.
+- **Notifications** — real-time alerts for round completions, missed contributions, upcoming payouts, and invites.
+- **Wallet Integration** — connect your Web3 wallet for identity and signing.
+- **Calculator** — contribution and payout estimator before joining a circle.
+- **Offline Support** — service worker caches the shell so the app loads without a network connection.
+- **Themes** — light and dark mode, comfortable and compact table density.
 
 ---
 
-## 🛠️ Frontend Setup and Initialization
+## Screenshots
 
-### ✅ Prerequisites
+> Add screenshots of the landing page, dashboard and circle detail view here once the app is deployed.
 
-* NodeJS (v16+)
-* npm
+| Landing | Dashboard | Circle Detail |
+|---------|-----------|---------------|
+| _coming soon_ | _coming soon_ | _coming soon_ |
 
-### 🔧 Installation
+---
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `NEXT_PUBLIC_API_ADAPTER` | No | `mock` | Set to `http` to use the live HTTP adapter instead of mock data. |
+| `NEXT_PUBLIC_API_URL` | When adapter is `http` | — | Base URL of the backend API, e.g. `https://api.ahjoor.xyz`. |
+
+Create a `.env.local` file in the project root and add any variables you want to override:
 
 ```
-# Clone the frontend repo
-git clone https://github.com/Ahjoor/ahjoor-frontend.git
-cd ahjoor-frontend
+NEXT_PUBLIC_API_ADAPTER=mock
+NEXT_PUBLIC_API_URL=https://api.ahjoor.xyz
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm 9+ (or npm / yarn)
+
+### Installation
+
+```bash
+# Clone the repo
+git clone https://github.com/ussyalfaks/ahjoorxmr-frontend.git
+cd ahjoorxmr-frontend
 
 # Install dependencies
-npm install # or npm install --legacy-peer-deps
+pnpm install
 
-# Start the development server
-npm run dev
+# Start the dev server
+pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser and you'll see the app running.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-Note: If this frontend is part of a monorepo, adjust the `git clone` and `cd` commands accordingly to navigate to the frontend directory after cloning the main repository.
+### Scripts
+
+| Command | Description |
+|---|---|
+| `pnpm dev` | Start the Next.js development server with hot-reload. |
+| `pnpm build` | Create a production build. |
+| `pnpm start` | Start the production server (requires a prior `build`). |
+| `pnpm lint` | Run ESLint across the project. |
 
 ---
 
-## 🤝 Contributing
+## Project Structure
+
+```
+app/          Next.js App Router pages and layouts
+components/   Shared UI components
+  ui/         Primitive components (buttons, toasts, skeletons, …)
+contexts/     React context providers (theme, wallet, …)
+data/         Mock data files — replaced by the API client when a backend is live
+hooks/        Custom React hooks including TanStack Query data-fetching hooks
+lib/
+  api/        Typed API client (client.ts, mockAdapter.ts, httpAdapter.ts)
+  queryKeys.ts  Centralised TanStack Query key factory
+types/        TypeScript interface definitions
+public/       Static assets and service-worker entry point
+```
+
+---
+
+## Contributing
 
 We welcome contributors of all experience levels!
 
-### 🧰 Getting Started
+### Getting Started
 
-* Look for __good first issues__
-* Fork the repository
-* Create a feature branch
-* Open a pull request
-* - [Figma Design](https://www.figma.com/design/NlDFuleGHbh26rRp1ZfyvE/Ahjoor-Design?node-id=0-1&t=3E08H8am5RpUngRF-1)
-### 🌳 Branching Strategy
+- Look for **good first issues** on the [issues page](https://github.com/ussyalfaks/ahjoorxmr-frontend/issues).
+- Fork the repository and create a feature branch from `dev`.
+- Open a pull request against `dev`.
+- [Figma Design](https://www.figma.com/design/NlDFuleGHbh26rRp1ZfyvE/Ahjoor-Design?node-id=0-1&t=3E08H8am5RpUngRF-1)
 
-* `main` → stable release branch
-* `dev` → active development
-* `feature/*` → for individual features or fixes
+### Branching Strategy
 
-### 📂 Code Guidelines
+- `main` — stable release branch
+- `dev` — active development
+- `feature/*` — individual features or fixes
 
-* Keep PRs small and focused
-* Write clear commit messages
-* Update docs when necessary
+### Commit Convention
 
-### ✍️ Commit Convention
+We use [Conventional Commits](https://www.conventionalcommits.org/):
 
-We use __Conventional Commits__ to standardize commit messages.
+| Prefix | Purpose |
+|---|---|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `refactor` | Code changes with no feature/fix |
+| `chore` | Maintenance tasks |
 
-* `feat`: new feature
-* `fix`: bug fix
-* `docs`: documentation only
-* `refactor`: code changes without feature/fix
-* `chore`: maintenance tasks
+---
 
-## 🔗 Resources
+## Resources
 
+- [Next.js App Router](https://nextjs.org/docs/app)
+- [TanStack Query](https://tanstack.com/query/latest)
 - [Stellar Documentation](https://developers.stellar.org/)
 - [Soroban Smart Contracts](https://soroban.stellar.org/)
-- [Stellar CLI Reference](https://developers.stellar.org/docs/tools/developer-tools)
-- [Next.js App Router](https://nextjs.org/docs/app)
 
+---
 
-
-## 🛡️ License
+## License
 
 This project is licensed under the **MIT License**.
 
 ---
 
-##  Contact Us
+## Contact
 
-Have questions or feedback?
-
-*  [Telegram: __Ahjoor Telegram Group__](https://t.me/ahjoor)
-
-
----
+Have questions or feedback? Join us on [Telegram](https://t.me/ahjoor).
