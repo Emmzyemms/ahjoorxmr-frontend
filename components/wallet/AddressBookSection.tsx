@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { BookUser, Pencil, Plus, Trash2, X } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useToast } from "@/components/ui/Toast";
+import { useUndoableRemoval } from "@/hooks/useUndoableRemoval";
 import { truncateAddress } from "@/contexts/WalletContext";
 import {
   addContact,
@@ -136,19 +137,27 @@ function ContactForm({
 }
 
 export default function AddressBookSection() {
-  const { showToast } = useToast();
   const [contacts, setContacts] = useState<AddressBookContact[]>([]);
   const [mode, setMode] = useState<"idle" | "adding" | { editingId: string }>("idle");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // #245: the "Delete? Confirm" step above is a separate safety net
+  // (catches a stray click); this is the actual undo window required by
+  // the issue, deferring the persisted `removeContact()` call itself
+  // until it closes.
+  const { remove, isPending } = useUndoableRemoval<string>();
 
   useEffect(() => {
     setContacts(getContacts());
   }, []);
 
   function handleDelete(id: string) {
-    setContacts(removeContact(id));
+    const target = contacts.find((c) => c.id === id);
     setDeletingId(null);
-    showToast({ title: "Contact removed", variant: "success" });
+    remove(id, {
+      title: "Contact removed",
+      message: target?.label,
+      commit: () => setContacts(removeContact(id)),
+    });
   }
 
   return (
@@ -186,11 +195,11 @@ export default function AddressBookSection() {
         </div>
       )}
 
-      {contacts.length === 0 && mode === "idle" ? (
+      {contacts.filter((c) => !isPending(c.id)).length === 0 && mode === "idle" ? (
         <p className="text-sm text-[var(--muted)]">No saved contacts yet.</p>
       ) : (
         <div className="space-y-2">
-          {contacts.map((contact) => {
+          {contacts.filter((c) => !isPending(c.id)).map((contact) => {
             const isEditing = typeof mode === "object" && mode.editingId === contact.id;
             if (isEditing) {
               return (

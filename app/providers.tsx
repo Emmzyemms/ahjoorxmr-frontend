@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import NetworkMismatchModal from "@/components/wallet/NetworkMismatchModal";
 
 const CONSENT_STORAGE_KEY = "cookie-consent";
 const CONSENT_VERSION = 1;
@@ -247,6 +248,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           <ToastProvider>
             {children}
             <CookieConsent />
+            {/* #220: global so it blocks signing from any page, not just
+                the ones that happen to import it. */}
+            <NetworkMismatchModal />
           </ToastProvider>
         </WalletProvider>
       </DensityProvider>

@@ -36,6 +36,7 @@ import CircleImage from "@/components/circles/CircleImage";
 import { DownloadAgreementButton } from "@/components/circles/DownloadAgreementButton";
 import type { ModerationEvent } from "@/types/discussion";
 import WaitlistPositionCard from "@/components/circles/WaitlistPositionCard";
+import PayoutScheduleTimeline from "@/components/circles/PayoutScheduleTimeline";
 import PayoutMethodSelector from "@/components/circles/PayoutMethodSelector";
 import PayoutMethodBadge from "@/components/circles/PayoutMethodBadge";
 import { getCircleCurrency, isPayoutInProgress } from "@/lib/payoutMethods";
@@ -922,6 +923,23 @@ export default function CircleDetailPage({
             </p>
           </div>
         )}
+
+        {/* Payout Schedule */}
+        <div>
+          <div className="flex items-center mb-4">
+            <h2 className="text-lg font-bold font-sora text-[var(--text)] shrink-0">Payout Schedule</h2>
+            <div className="ml-4 h-px bg-[var(--ov-1a)] w-full" aria-hidden="true" />
+          </div>
+          <PayoutScheduleTimeline
+            participants={circle.participants}
+            totalRounds={circle.totalRounds}
+            currentRound={circle.currentRound}
+            contribution={`${Number(circle.contribution.replace(/[^\d.]/g, "")) * circle.participants.length} USDT`}
+            roundHistory={circle.roundHistory}
+            nextPayoutDeadline={circle.nextPayoutDeadline}
+            currentUserAddress={CURRENT_WALLET}
+          />
+        </div>
 
         {/* Round History */}
         <div>
