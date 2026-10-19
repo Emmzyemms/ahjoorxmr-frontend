@@ -5,10 +5,30 @@ import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
 
 export type ToastVariant = "success" | "error" | "warning" | "info";
 
+/**
+ * Issue #244 – Undo for Destructive Actions via Toast
+ *
+ * ToastInput now accepts an optional `action` slot.  When supplied the
+ * toast renders a labelled button.  The action is committed (via
+ * `onCommit`) only after the toast expires; clicking `onAction`
+ * (the "Undo" button) cancels the commit and executes the undo handler
+ * instead.
+ */
+export interface ToastAction {
+  /** Label shown on the button, e.g. "Undo" */
+  label: string;
+  /** Called when the user clicks the action button (undo path) */
+  onAction: () => void;
+  /** Called when the toast expires WITHOUT the action being triggered (commit path) */
+  onCommit?: () => void;
+}
+
 export interface ToastInput {
   title: string;
   message?: string;
   variant?: ToastVariant;
+  /** Optional action / undo slot */
+  action?: ToastAction;
 }
 
 export interface ToastItem extends Required<Pick<ToastInput, "title">> {
@@ -16,6 +36,7 @@ export interface ToastItem extends Required<Pick<ToastInput, "title">> {
   message?: string;
   variant: ToastVariant;
   phase: "entering" | "visible" | "leaving";
+  action?: ToastAction;
 }
 
 export interface ToastContextValue {
@@ -54,7 +75,29 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       message: toast.message,
       variant: toast.variant ?? "info",
       phase: "entering",
+      action: toast.action,
     };
+    // Track whether the action was triggered so we can skip onCommit.
+    let actionTriggered = false;
+    if (toast.action) {
+      const originalOnAction = toast.action.onAction;
+      nextToast.action = {
+        ...toast.action,
+        onAction: () => {
+          actionTriggered = true;
+          originalOnAction();
+          // Dismiss the toast immediately
+          setToasts((current) =>
+            current.map((item) =>
+              item.id === id ? { ...item, phase: "leaving" } : item
+            )
+          );
+          window.setTimeout(() => {
+            setToasts((current) => current.filter((item) => item.id !== id));
+          }, EXIT_ANIMATION_MS);
+        },
+      };
+    }
 
     setToasts((current) => [...current, nextToast]);
 
@@ -72,6 +115,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             )
           : current
       );
+
+      // Commit the action only if the user didn't trigger undo.
+      if (!actionTriggered && toast.action?.onCommit) {
+        toast.action.onCommit();
+      }
 
       window.setTimeout(() => {
         setToasts((current) => current.filter((item) => item.id !== id));
