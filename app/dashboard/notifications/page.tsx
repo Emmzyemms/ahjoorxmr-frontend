@@ -16,102 +16,10 @@ import {
   Repeat,
   Send,
 } from "lucide-react";
-import type { Notification, NotificationType, NotificationCategory } from "@/types/notification";
+import type { NotificationType, NotificationCategory } from "@/types/notification";
 import { NOTIFICATION_CATEGORIES } from "@/types/notification";
-
-// Mock notification data
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "1",
-    type: "your_turn",
-    title: "It's Your Turn",
-    description: "You're next to receive the payout in Family Savings circle.",
-    timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    href: "/dashboard",
-    read: false,
-  },
-  {
-    id: "2",
-    type: "round_complete",
-    title: "Round Completed",
-    description: "Round 2 of School Fees circle has been completed.",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    href: "/dashboard",
-    read: false,
-  },
-  {
-    id: "3",
-    type: "payout_ready",
-    title: "Payout Ready",
-    description: "Your payout of 200 USDT is ready to claim.",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    href: "/dashboard",
-    read: false,
-  },
-  {
-    id: "4",
-    type: "missed_contribution",
-    title: "Missed Contribution",
-    description: "A member missed their contribution in Community Fund.",
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    href: "/dashboard/circles",
-    read: true,
-  },
-  {
-    id: "5",
-    type: "payout_ready",
-    title: "Payout Ready",
-    description: "Your payout of 150 USDC is ready to claim from Wedding Fund.",
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    href: "/dashboard",
-    read: true,
-  },
-  {
-    id: "6",
-    type: "round_complete",
-    title: "Round Completed",
-    description: "Round 1 of Car Repairs circle has been completed.",
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    href: "/dashboard",
-    read: true,
-  },
-  {
-    id: "7",
-    type: "missed_contribution",
-    title: "Missed Contribution",
-    description: "Emeka missed their contribution in Family Savings.",
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    href: "/dashboard/circles",
-    read: true,
-  },
-  {
-    id: "8",
-    type: "your_turn",
-    title: "It's Your Turn",
-    description: "You're next to receive the payout in Travel Fund circle.",
-    timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    href: "/dashboard",
-    read: true,
-  },
-  {
-    id: "9",
-    type: "payout_ready",
-    title: "Payout Ready",
-    description: "Your payout of 75 STRK is ready to claim.",
-    timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-    href: "/dashboard",
-    read: true,
-  },
-  {
-    id: "10",
-    type: "round_complete",
-    title: "Round Completed",
-    description: "Round 3 of Savings Challenge circle has been completed.",
-    timestamp: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    href: "/dashboard",
-    read: true,
-  },
-];
+import { MOCK_NOTIFICATIONS } from "@/data/notifications";
+import RelativeTime from "@/components/ui/RelativeTime";
 
 const TYPE_CONFIG: Record<
   NotificationType,
@@ -128,18 +36,6 @@ const TYPE_CONFIG: Record<
   circle_invite: { icon: Send, color: "text-[#4B6B76]" },
 };
 
-function relativeTime(date: Date): string {
-  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
 
 function getFilterLabel(filter: NotificationCategory): string {
   const labels: Record<NotificationCategory, string> = {
@@ -331,7 +227,9 @@ export default function NotificationsPage() {
                   <p className="text-xs text-[var(--muted)] line-clamp-2 mb-2">
                     {notification.description}
                   </p>
-                  <p className="text-xs text-[var(--faint)]">{relativeTime(notification.timestamp)}</p>
+                  <p className="text-xs text-[var(--faint)]">
+                    <RelativeTime date={notification.timestamp} className="text-[var(--faint)]" />
+                  </p>
                 </Link>
 
                 {/* Delete Button */}
