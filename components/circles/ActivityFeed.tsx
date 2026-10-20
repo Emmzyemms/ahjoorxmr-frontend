@@ -14,26 +14,11 @@ import {
   PlayCircle,
 } from "lucide-react";
 import type { CircleEvent, EventType } from "@/types/circle";
+import RelativeTime from "@/components/ui/RelativeTime";
 
 interface Props {
   events: CircleEvent[];
   pageSize?: number;
-}
-
-function getRelativeTime(date: Date): string {
-  const now = Date.now();
-  const diffMs = now - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-
-  if (diffSec < 60) return rtf.format(-diffSec, "second");
-  if (diffMin < 60) return rtf.format(-diffMin, "minute");
-  if (diffHr < 24) return rtf.format(-diffHr, "hour");
-  return rtf.format(-diffDay, "day");
 }
 
 function truncateAddress(address: string): string {
@@ -159,12 +144,10 @@ export default function ActivityFeed({ events, pageSize = 10 }: Props) {
                     </span>
                   )}
                 </p>
-                <time
-                  dateTime={event.timestamp.toISOString()}
+                <RelativeTime
+                  date={event.timestamp}
                   className="text-xs text-[var(--faint)] shrink-0"
-                >
-                  {getRelativeTime(event.timestamp)}
-                </time>
+                />
               </div>
             </li>
           );

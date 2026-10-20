@@ -6,6 +6,27 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import NetworkMismatchModal from "@/components/wallet/NetworkMismatchModal";
+
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 30_000,
+        retry: 1,
+      },
+    },
+  });
+}
+
+let browserQueryClient: QueryClient | undefined;
+
+/** One QueryClient per browser session; a fresh one per server render. */
+function getQueryClient() {
+  if (typeof window === "undefined") return makeQueryClient();
+  if (!browserQueryClient) browserQueryClient = makeQueryClient();
+  return browserQueryClient;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -250,6 +271,7 @@ function CookieConsent() {
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   useServiceWorker();
+  const [queryClient] = useState(getQueryClient);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -264,7 +286,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         </DensityProvider>
       </ThemeProvider>
       {process.env.NODE_ENV === "development" && (
-        <ReactQueryDevtools initialIsOpen={false} />
+        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       )}
     </QueryClientProvider>
   );

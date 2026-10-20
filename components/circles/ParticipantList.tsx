@@ -53,7 +53,7 @@ function truncateAddress(address: string) {
  * Swap the inner div for an actual <Jazzicon /> if/when that package is
  * added to the project (e.g. `react-jazzicon`).
  */
-function Avatar({ address }: { address: string }) {
+export function Avatar({ address }: { address: string }) {
   const hue = useMemo(() => {
     let hash = 0;
     for (let i = 0; i < address.length; i++) {

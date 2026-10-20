@@ -1,112 +1,71 @@
 "use client";
 
-/**
- * <RelativeTime> — renders a human-friendly relative timestamp that updates
- * automatically every minute.
- *
- * - Uses Intl.RelativeTimeFormat so the output is locale-aware.
- * - Exposes the full ISO date via the <time dateTime> attribute and a
- *   title tooltip so assistive technology and power users can see the
- *   exact moment.
- * - Uses a single shared interval across all mounted instances to avoid
- *   spawning one timer per component.
- */
+import { useSyncExternalStore } from "react";
+import { subscribeToClock, getClockSnapshot } from "@/lib/relativeTimeClock";
 
-import { useEffect, useState } from "react";
+const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
-// ---------------------------------------------------------------------------
-// Shared interval manager
-// ---------------------------------------------------------------------------
-
-type Listener = () => void;
-
-let sharedInterval: ReturnType<typeof setInterval> | null = null;
-const listeners = new Set<Listener>();
-
-function subscribe(fn: Listener): () => void {
-  listeners.add(fn);
-  if (!sharedInterval) {
-    sharedInterval = setInterval(() => {
-      listeners.forEach((l) => l());
-    }, 60_000);
-  }
-  return () => {
-    listeners.delete(fn);
-    if (listeners.size === 0 && sharedInterval !== null) {
-      clearInterval(sharedInterval);
-      sharedInterval = null;
-    }
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Formatting helpers
-// ---------------------------------------------------------------------------
-
-const UNITS: { unit: Intl.RelativeTimeFormatUnit; ms: number }[] = [
-  { unit: "year", ms: 1000 * 60 * 60 * 24 * 365 },
-  { unit: "month", ms: 1000 * 60 * 60 * 24 * 30 },
-  { unit: "week", ms: 1000 * 60 * 60 * 24 * 7 },
-  { unit: "day", ms: 1000 * 60 * 60 * 24 },
-  { unit: "hour", ms: 1000 * 60 * 60 },
-  { unit: "minute", ms: 1000 * 60 },
+const DIVISIONS: Array<{ amount: number; unit: Intl.RelativeTimeFormatUnit }> = [
+  { amount: 60, unit: "seconds" },
+  { amount: 60, unit: "minutes" },
+  { amount: 24, unit: "hours" },
+  { amount: 7, unit: "days" },
+  { amount: 4.34524, unit: "weeks" },
+  { amount: 12, unit: "months" },
+  { amount: Number.POSITIVE_INFINITY, unit: "years" },
 ];
 
-function formatRelative(date: Date, now: Date): string {
-  const diffMs = date.getTime() - now.getTime();
-  const absMs = Math.abs(diffMs);
-  const sign = diffMs < 0 ? -1 : 1;
+/** Formats `date` relative to now, e.g. "2 hours ago" / "in 3 days". */
+export function formatRelativeTime(date: Date): string {
+  let duration = (date.getTime() - Date.now()) / 1000;
 
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-
-  for (const { unit, ms } of UNITS) {
-    if (absMs >= ms) {
-      return formatter.format(Math.round((diffMs / ms) * sign) * sign, unit);
+  for (const division of DIVISIONS) {
+    if (Math.abs(duration) < division.amount) {
+      return rtf.format(Math.round(duration), division.unit);
     }
+    duration /= division.amount;
   }
-
-  return formatter.format(0, "second");
+  return rtf.format(Math.round(duration), "years");
 }
 
-function formatFull(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "long",
-    timeStyle: "short",
+function formatFullDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-interface RelativeTimeProps {
-  /** The date to display. Accepts a Date, an ISO-8601 string, or a timestamp. */
-  date: Date | string | number;
+export interface RelativeTimeProps {
+  /** The moment to render, as a Date or an ISO-8601 string. */
+  date: Date | string;
   className?: string;
 }
 
-export function RelativeTime({ date, className }: RelativeTimeProps) {
-  const parsed = date instanceof Date ? date : new Date(date);
-  const [, forceUpdate] = useState(0);
+/**
+ * Renders a self-updating relative timestamp, e.g. "2 hours ago".
+ *
+ * Uses `Intl.RelativeTimeFormat` and re-renders once a minute via a single
+ * shared clock (see lib/relativeTimeClock.ts) instead of each instance
+ * running its own timer. The full date is available as a `title` tooltip,
+ * and the underlying `<time>` element always carries the raw ISO date.
+ */
+export default function RelativeTime({ date, className }: RelativeTimeProps) {
+  const value = typeof date === "string" ? new Date(date) : date;
 
-  useEffect(() => {
-    const unsub = subscribe(() => forceUpdate((n) => n + 1));
-    return unsub;
-  }, []);
+  // Re-renders this component every time the shared minute clock ticks.
+  useSyncExternalStore(subscribeToClock, getClockSnapshot, getClockSnapshot);
 
-  const now = new Date();
-  const relative = formatRelative(parsed, now);
-  const full = formatFull(parsed);
+  if (Number.isNaN(value.getTime())) {
+    return null;
+  }
 
   return (
-    <time
-      dateTime={parsed.toISOString()}
-      title={full}
-      className={className}
-    >
-      {relative}
+    <time dateTime={value.toISOString()} title={formatFullDate(value)} className={className}>
+      {formatRelativeTime(value)}
     </time>
   );
 }
-
-export default RelativeTime;

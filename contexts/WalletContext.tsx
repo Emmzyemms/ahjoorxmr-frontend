@@ -9,6 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { authenticateWithPasskey } from "@/lib/passkeys";
+import { APP_NETWORK, type StellarNetwork } from "@/config/network";
 
 export type WalletId = "argent" | "braavos" | "passkey";
 
@@ -26,6 +27,16 @@ export interface LinkedWallet {
   address: string;
   walletId: WalletId;
   balance: number;
+  // #220: what network this wallet reports itself on. Defaults to
+  // APP_NETWORK on connect (a real integration would read this from
+  // `getNetworkDetails()` instead) — see setWalletNetwork for how a
+  // mismatch gets produced/cleared.
+  network: StellarNetwork;
+  // #217: whether this wallet already has a USDC trustline. Defaults to
+  // false so the dashboard banner has something real to detect and
+  // dismiss — a real integration would derive this from
+  // `Horizon.loadAccount(address).balances`.
+  hasUsdcTrustline: boolean;
 }
 
 interface WalletContextValue {
@@ -41,6 +52,13 @@ interface WalletContextValue {
   signInWithPasskey: () => Promise<void>;
   disconnect: (address?: string) => void;
   setActiveWallet: (address: string) => void;
+  // #220: demo-only escape hatch to actually produce a mismatch to test
+  // the guard against, since there's no real wallet extension here whose
+  // network could genuinely differ. A real integration wouldn't need
+  // this — the wallet's own network would just be whatever it is.
+  setWalletNetwork: (address: string, network: StellarNetwork) => void;
+  // #217: the one-click "Add USDC trustline" action.
+  addUsdcTrustline: (address: string) => void;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -65,7 +83,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const legacyStored = localStorage.getItem("ahjoor_wallet");
       
       if (storedWallets) {
-        const parsed = JSON.parse(storedWallets) as LinkedWallet[];
+        // Backfills `network`/`hasUsdcTrustline` for wallets persisted
+        // before those fields existed, so an old localStorage payload
+        // doesn't resurrect as `undefined` and silently bypass the guard.
+        const parsed = (JSON.parse(storedWallets) as LinkedWallet[]).map((w) => ({
+          network: APP_NETWORK,
+          hasUsdcTrustline: false,
+          ...w,
+        }));
         setLinkedWallets(parsed);
         if (storedActive && parsed.some(w => w.address === storedActive)) {
           setActiveWalletAddress(storedActive);
@@ -74,7 +99,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
       } else if (legacyStored) {
         const { address: addr, walletId: wid } = JSON.parse(legacyStored);
-        const legacyWallet: LinkedWallet = { address: addr, walletId: wid, balance: 1500.50 };
+        const legacyWallet: LinkedWallet = { address: addr, walletId: wid, balance: 1500.50, network: APP_NETWORK, hasUsdcTrustline: false };
         setLinkedWallets([legacyWallet]);
         setActiveWalletAddress(addr);
         localStorage.setItem(STORAGE_KEY_LINKED, JSON.stringify([legacyWallet]));
@@ -102,9 +127,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async (wid: WalletId) => {
     const addr = generateMockAddress(wid);
     const mockBalance = Number((Math.random() * 5000).toFixed(2));
-    
+
     setLinkedWallets(prev => {
-      const newWallets = [...prev, { address: addr, walletId: wid, balance: mockBalance }];
+      // #220: detected "on connect" — a real integration reads this from
+      // the wallet's own getNetworkDetails() here instead of defaulting.
+      const newWallets = [...prev, { address: addr, walletId: wid, balance: mockBalance, network: APP_NETWORK, hasUsdcTrustline: false }];
       saveToStorage(newWallets, addr);
       return newWallets;
     });
@@ -117,7 +144,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const mockBalance = Number((Math.random() * 5000).toFixed(2));
 
     setLinkedWallets((prev) => {
-      const newWallets = [...prev, { address: addr, walletId: "passkey" as const, balance: mockBalance }];
+      const newWallets = [...prev, { address: addr, walletId: "passkey" as const, balance: mockBalance, network: APP_NETWORK, hasUsdcTrustline: false }];
       saveToStorage(newWallets, addr);
       return newWallets;
     });
@@ -138,6 +165,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
       
       saveToStorage(newWallets, newActive);
+      return newWallets;
+    });
+  }, [activeWalletAddress]);
+
+  const setWalletNetwork = useCallback((addr: string, network: StellarNetwork) => {
+    setLinkedWallets((prev) => {
+      const newWallets = prev.map((w) => (w.address === addr ? { ...w, network } : w));
+      saveToStorage(newWallets, activeWalletAddress);
+      return newWallets;
+    });
+  }, [activeWalletAddress]);
+
+  const addUsdcTrustline = useCallback((addr: string) => {
+    setLinkedWallets((prev) => {
+      const newWallets = prev.map((w) => (w.address === addr ? { ...w, hasUsdcTrustline: true } : w));
+      saveToStorage(newWallets, activeWalletAddress);
       return newWallets;
     });
   }, [activeWalletAddress]);
@@ -165,7 +208,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         connect,
         signInWithPasskey,
         disconnect,
-        setActiveWallet
+        setActiveWallet,
+        setWalletNetwork,
+        addUsdcTrustline
       }}
     >
       {children}

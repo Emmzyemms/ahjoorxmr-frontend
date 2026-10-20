@@ -2,20 +2,50 @@
 
 import { useMemo, useState } from "react";
 import { Calendar, CircleDollarSign, Flame, Share2, Trophy } from "lucide-react";
-import { MOCK_CONTRIBUTIONS } from "@/data/contributions";
-import { MOCK_PAYOUT_HISTORY } from "@/data/payouts";
 import { calculateAnnualSavingsSummary, getSummaryYears } from "@/lib/annualSummary";
 import ShareMilestoneButton from "@/components/ui/ShareMilestoneButton";
+import { useContributions } from "@/lib/hooks/useContributions";
+import { usePayouts } from "@/lib/hooks/usePayouts";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const currentYear = new Date().getFullYear();
 
 export default function AnnualSavingsSummary() {
+  // Sourced from the typed API client (lib/api) via TanStack Query instead
+  // of importing data/contributions.ts and data/payouts.ts directly.
+  const { data: contributions, isLoading: contributionsLoading, isError: contributionsError } = useContributions();
+  const { data: payouts, isLoading: payoutsLoading, isError: payoutsError } = usePayouts();
+  const isLoading = contributionsLoading || payoutsLoading;
+  const isError = contributionsError || payoutsError;
+
   const years = useMemo(() => getSummaryYears(), []);
   const [year, setYear] = useState(years.includes(currentYear) ? currentYear : years[0] ?? currentYear);
   const summary = useMemo(
-    () => calculateAnnualSavingsSummary(year, MOCK_CONTRIBUTIONS, MOCK_PAYOUT_HISTORY),
-    [year]
+    () => calculateAnnualSavingsSummary(year, contributions ?? [], payouts ?? []),
+    [year, contributions, payouts]
   );
+
+  if (isLoading) {
+    return (
+      <section className="rounded-2xl border border-[var(--ov-10)] bg-[var(--content)] p-6">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-3 h-6 w-64" />
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (isError) {
+    return (
+      <section className="rounded-2xl border border-[var(--ov-10)] bg-[var(--content)] p-6" role="alert">
+        <p className="text-sm text-[var(--muted)]">Couldn&apos;t load your annual savings summary right now.</p>
+      </section>
+    );
+  }
   const shareData = {
     type: "annual_summary" as const,
     circleName: `${summary.year} Savings Wrapped`,
