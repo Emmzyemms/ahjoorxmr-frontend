@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import NetworkMismatchModal from "@/components/wallet/NetworkMismatchModal";
 
 function makeQueryClient() {
   return new QueryClient({

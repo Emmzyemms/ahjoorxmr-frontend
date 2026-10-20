@@ -35,6 +35,18 @@ export default function Toaster() {
                 {toast.message && (
                   <p className={`mt-1 text-sm leading-5 ${styles.message}`}>{toast.message}</p>
                 )}
+                {toast.action && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast.action?.onClick();
+                      dismissToast(toast.id);
+                    }}
+                    className={`mt-2 text-sm font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76] rounded ${styles.title}`}
+                  >
+                    {toast.action.label}
+                  </button>
+                )}
               </div>
 
               <button

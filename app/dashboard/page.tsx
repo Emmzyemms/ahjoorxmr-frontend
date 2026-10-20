@@ -12,6 +12,9 @@ import type { Circle } from "@/types/circle";
 import BalanceBreakdownWidget from "@/components/wallet/BalanceBreakdownWidget"
 import AnnualSavingsSummary from "@/components/dashboard/AnnualSavingsSummary";
 import SavingsGoalsWidget from "@/components/dashboard/SavingsGoalsWidget";
+import TrustlineBanner from "@/components/wallet/TrustlineBanner";
+import { useNetworkGuard } from "@/hooks/useNetworkGuard";
+import { useToast } from "@/components/ui/Toast";
 
 interface PendingTx {
   type: TxType;
@@ -228,7 +231,26 @@ export default function DashboardOverviewPage() {
     [deadlines]
   );
 
+  // #220: re-checked here, right before any signing flow opens — not just
+  // relying on the global blocking modal having already caught it on
+  // connect, since a real wallet's network can change at any time.
+  const { isMismatched: networkMismatched } = useNetworkGuard();
+  const { showToast } = useToast();
+
+  const guardTransaction = (): boolean => {
+    if (networkMismatched) {
+      showToast({
+        title: "Wrong network",
+        message: "Switch your wallet back to the app's network before continuing.",
+        variant: "error",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleContributeClick = (circle: Circle) => {
+    if (!guardTransaction()) return;
     setFailedTx(null);
     setPendingTx({
       type: "contribute",
@@ -238,6 +260,7 @@ export default function DashboardOverviewPage() {
   };
 
   const handleClaimClick = (circle: Circle) => {
+    if (!guardTransaction()) return;
     setFailedTx(null);
     setPendingTx({
       type: "claim",
@@ -360,6 +383,12 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="pb-20 md:pb-0 relative min-h-screen">
+      {/* #217: dismisses itself (returns null) once the active wallet has
+          a trustline — no separate dismiss button/state needed. */}
+      <div className="mb-6">
+        <TrustlineBanner />
+      </div>
+
       {/* Top action bar */}
       {isClient && (
         <div className="flex justify-end mb-6 relative">

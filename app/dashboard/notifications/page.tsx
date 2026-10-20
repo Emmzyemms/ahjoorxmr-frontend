@@ -62,13 +62,20 @@ export default function NotificationsPage() {
     }
   }, []);
 
+  // #245: dismissing a notification is destructive (there's no "view
+  // deleted notifications" anywhere), so it goes through the shared
+  // undo-toast flow instead of filtering `notifications` directly —
+  // `pendingIds` hides it from view immediately, but the real removal
+  // from `notifications` only happens if the 5s undo window closes.
+  const { remove: removeWithUndo, isPending } = useUndoableRemoval<string>();
+
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
 
   // Filter notifications based on selected category
   const filteredNotifications = useMemo(() => {
     const types = NOTIFICATION_CATEGORIES[selectedFilter];
-    return notifications.filter((n) => types.includes(n.type));
-  }, [notifications, selectedFilter]);
+    return notifications.filter((n) => types.includes(n.type) && !isPending(n.id));
+  }, [notifications, selectedFilter, isPending]);
 
   // Sort by date descending (newest first)
   const sortedNotifications = useMemo(
@@ -94,9 +101,17 @@ export default function NotificationsPage() {
     );
   }, []);
 
-  const deleteNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+  const deleteNotification = useCallback(
+    (id: string) => {
+      const target = notifications.find((n) => n.id === id);
+      removeWithUndo(id, {
+        title: "Notification dismissed",
+        message: target?.title,
+        commit: () => setNotifications((prev) => prev.filter((n) => n.id !== id)),
+      });
+    },
+    [notifications, removeWithUndo],
+  );
 
   const handleFilterChange = (filter: NotificationCategory) => {
     setSelectedFilter(filter);
