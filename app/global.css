@@ -45,6 +45,13 @@
   --success: #15803d;
   --info: #1d63c4;
 
+  /* Chart series colors. Each meets 3:1 contrast against --surface/--bg in
+     its theme (light: teal-700 ~5:1, accent ~4.5:1). */
+  --chart-1: #0f766e;
+  --chart-2: #6c5ce7;
+  --chart-grid: rgba(0, 0, 0, 0.08);
+  --chart-axis: rgba(0, 0, 0, 0.45);
+
   /* Subtle tint overlays (hover states, dividers, faint fills) — black-based
      in light theme, white-based in dark theme. Suffix matches the alpha hex
      these replace (e.g. --ov-0a replaces the old #ffffff0a). */
@@ -95,6 +102,11 @@ html.high-contrast.dark {
   --nav-bg: rgba(10, 10, 15, 0.82);
   --success: #4ADE80;
   --info: #8FC7FF;
+
+  --chart-1: #5EEAD4;
+  --chart-2: #8B5CF6;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --chart-axis: rgba(255, 255, 255, 0.45);
 
   --ov-03: rgba(255, 255, 255, 0.012);
   --ov-05: rgba(255, 255, 255, 0.02);
@@ -191,6 +203,24 @@ body {
 .delay-3 { animation-delay: 0.3s; }
 .delay-4 { animation-delay: 0.4s; }
 .delay-5 { animation-delay: 0.5s; }
+
+/* Respect the OS "reduce motion" setting: drop non-essential animations,
+   transitions and smooth scrolling. JS-driven animations use the
+   usePrefersReducedMotion hook instead. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* ============================================================
    Print styles — payout receipt

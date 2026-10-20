@@ -1,9 +1,10 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useId, useMemo, useState } from "react";
 import { ArrowLeft, BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
 import Link from "next/link";
 import ContributionFiatValueChart, { type ContributionRecord } from "@/components/charts/ContributionFiatValueChart";
+import ChartDataTable, { ChartViewToggle } from "@/components/charts/ChartDataTable";
 
 interface Round {
   round: number;
@@ -54,6 +55,12 @@ const generateMockAnalytics = (circleId: string): AnalyticsData => ({
 });
 
 function ContributionTrendChart({ rounds }: { rounds: Round[] }) {
+  const [showTable, setShowTable] = useState(false);
+  const chartId = useId();
+  const titleId = `${chartId}-title`;
+  const descId = `${chartId}-desc`;
+  const tableId = `${chartId}-table`;
+
   if (rounds.length === 0) {
     return (
       <div className="h-[300px] rounded-2xl border border-[var(--ov-0f)] bg-[var(--surface)] flex items-center justify-center">
@@ -76,48 +83,79 @@ function ContributionTrendChart({ rounds }: { rounds: Round[] }) {
   }));
 
   const linePath = points.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(" ");
+  const chartDescription = `Line chart of ${rounds.length} rounds. Contributions ranged from ${Math.min(...rounds.map((r) => r.contributions)).toLocaleString()} to ${maxContribution.toLocaleString()} USDT per round.`;
 
   return (
     <div className="rounded-2xl bg-[var(--modal)] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
-      <div>
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-[var(--muted)]">Contribution Trend</p>
-        <h3 className="mt-2 text-xl font-bold font-sora text-[var(--text)]">Contributions per round over time</h3>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-[var(--muted)]">Contribution Trend</p>
+          <h3 className="mt-2 text-xl font-bold font-sora text-[var(--text)]">Contributions per round over time</h3>
+        </div>
+        <div className="self-start">
+          <ChartViewToggle showTable={showTable} onToggle={() => setShowTable((value) => !value)} controls={tableId} />
+        </div>
       </div>
 
-      <div className="mt-6 h-[280px] rounded-[1.5rem] border border-[var(--ov-10)] bg-[var(--surface)] p-6">
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full" role="img" aria-label="Contribution trend chart">
-          <defs>
-            <linearGradient id="contribution-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#5EEAD4" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#5EEAD4" stopOpacity="0.02" />
-            </linearGradient>
-            <linearGradient id="contribution-line" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#5EEAD4" />
-              <stop offset="100%" stopColor="#8B5CF6" />
-            </linearGradient>
-          </defs>
+      {showTable ? (
+        <div className="mt-6">
+          <ChartDataTable
+            id={tableId}
+            caption="Contributions per round"
+            columns={[
+              { key: "round", label: "Round" },
+              { key: "contributions", label: "Contributions (USDT)", numeric: true },
+              { key: "contributors", label: "Contributors", numeric: true },
+              { key: "paidOut", label: "Paid out (USDT)", numeric: true },
+              { key: "completedAt", label: "Completed" },
+            ]}
+            rows={rounds.map((round) => ({
+              round: `Round ${round.round}`,
+              contributions: round.contributions.toLocaleString(),
+              contributors: round.contributors,
+              paidOut: round.paidOut.toLocaleString(),
+              completedAt: round.completedAt,
+            }))}
+          />
+        </div>
+      ) : (
+        <div className="mt-6 h-[280px] rounded-[1.5rem] border border-[var(--ov-10)] bg-[var(--surface)] p-6">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full" role="img" aria-labelledby={titleId} aria-describedby={descId}>
+            <title id={titleId}>Contribution trend chart</title>
+            <desc id={descId}>{chartDescription}</desc>
+            <defs>
+              <linearGradient id="contribution-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.02" />
+              </linearGradient>
+              <linearGradient id="contribution-line" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="var(--chart-1)" />
+                <stop offset="100%" stopColor="var(--chart-2)" />
+              </linearGradient>
+            </defs>
 
-          {/* Grid lines */}
-          {[0, 25, 50, 75, 100].map((tick) => (
-            <line key={tick} x1="0" x2="100" y1={tick} y2={tick} stroke="rgba(255,255,255,0.06)" strokeDasharray="2 4" />
-          ))}
+            {/* Grid lines */}
+            {[0, 25, 50, 75, 100].map((tick) => (
+              <line key={tick} x1="0" x2="100" y1={tick} y2={tick} stroke="var(--chart-grid)" strokeDasharray="2 4" />
+            ))}
 
-          {/* Axes */}
-          <line x1="0" x2="100" y1={height - padding} y2={height - padding} stroke="rgba(255,255,255,0.14)" />
-          <line x1={padding} x2={padding} y1="0" y2={height - padding} stroke="rgba(255,255,255,0.08)" />
+            {/* Axes */}
+            <line x1="0" x2="100" y1={height - padding} y2={height - padding} stroke="var(--chart-axis)" />
+            <line x1={padding} x2={padding} y1="0" y2={height - padding} stroke="var(--chart-grid)" />
 
-          {/* Area fill */}
-          <path d={`${linePath} L${points[points.length - 1].x},${height - padding} L${padding},${height - padding} Z`} fill="url(#contribution-area)" />
+            {/* Area fill */}
+            <path d={`${linePath} L${points[points.length - 1].x},${height - padding} L${padding},${height - padding} Z`} fill="url(#contribution-area)" />
 
-          {/* Line */}
-          <path d={linePath} fill="none" stroke="url(#contribution-line)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Line */}
+            <path d={linePath} fill="none" stroke="url(#contribution-line)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 
-          {/* Points */}
-          {points.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r="2" fill="#5EEAD4" />
-          ))}
-        </svg>
-      </div>
+            {/* Points */}
+            {points.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r="2" fill="var(--chart-1)" />
+            ))}
+          </svg>
+        </div>
+      )}
 
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
         {rounds.map((round) => (
@@ -167,8 +205,12 @@ function ParticipantReliabilityChart({ participants }: { participants: Participa
               </div>
 
               <div className="flex items-center gap-2 mb-2">
-                <div className="flex-1 h-2 bg-[var(--ov-0a)] rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500 dark:bg-green-400" style={{ width: `${onTimePercent}%` }} />
+                <div
+                  className="flex-1 h-2 bg-[var(--ov-0a)] rounded-full overflow-hidden"
+                  role="img"
+                  aria-label={`${participant.name}: ${Math.round(onTimePercent)}% of contributions on time`}
+                >
+                  <div className="h-full bg-green-700 dark:bg-green-400" style={{ width: `${onTimePercent}%` }} />
                 </div>
               </div>
 

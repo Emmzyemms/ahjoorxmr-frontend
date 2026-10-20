@@ -79,6 +79,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `pnpm build` | Builds the app for production. |
 | `pnpm start` | Runs the production build (run `pnpm build` first). |
 | `pnpm lint` | Runs ESLint across the codebase. |
+| `pnpm test` | Runs Vitest component tests, including `vitest-axe` accessibility checks. |
+| `pnpm test:e2e` | Runs Playwright E2E tests, including `@axe-core/playwright` checks on the main routes (run `pnpm exec playwright install chromium` once first). |
 
 ---
 
