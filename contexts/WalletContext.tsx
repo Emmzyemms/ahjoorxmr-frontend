@@ -1,3 +1,4 @@
+import { safeStorage } from "@/lib/safeStorage";
 "use client";
 
 import {
@@ -78,9 +79,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const storedWallets = localStorage.getItem(STORAGE_KEY_LINKED);
-      const storedActive = localStorage.getItem(STORAGE_KEY_ACTIVE);
-      const legacyStored = localStorage.getItem("ahjoor_wallet");
+      const storedWallets = safeStorage.getItem(STORAGE_KEY_LINKED);
+      const storedActive = safeStorage.getItem(STORAGE_KEY_ACTIVE);
+      const legacyStored = safeStorage.getItem("ahjoor_wallet");
       
       if (storedWallets) {
         // Backfills `network`/`hasUsdcTrustline` for wallets persisted
@@ -102,9 +103,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const legacyWallet: LinkedWallet = { address: addr, walletId: wid, balance: 1500.50, network: APP_NETWORK, hasUsdcTrustline: false };
         setLinkedWallets([legacyWallet]);
         setActiveWalletAddress(addr);
-        localStorage.setItem(STORAGE_KEY_LINKED, JSON.stringify([legacyWallet]));
-        localStorage.setItem(STORAGE_KEY_ACTIVE, addr);
-        localStorage.removeItem("ahjoor_wallet");
+        safeStorage.setItem(STORAGE_KEY_LINKED, JSON.stringify([legacyWallet]));
+        safeStorage.setItem(STORAGE_KEY_ACTIVE, addr);
+        safeStorage.removeItem("ahjoor_wallet");
       }
     } catch {
       // ignore storage errors
@@ -113,11 +114,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const saveToStorage = (wallets: LinkedWallet[], activeAddr: string | null) => {
     try {
-      localStorage.setItem(STORAGE_KEY_LINKED, JSON.stringify(wallets));
+      safeStorage.setItem(STORAGE_KEY_LINKED, JSON.stringify(wallets));
       if (activeAddr) {
-        localStorage.setItem(STORAGE_KEY_ACTIVE, activeAddr);
+        safeStorage.setItem(STORAGE_KEY_ACTIVE, activeAddr);
       } else {
-        localStorage.removeItem(STORAGE_KEY_ACTIVE);
+        safeStorage.removeItem(STORAGE_KEY_ACTIVE);
       }
     } catch {
       // ignore
@@ -188,7 +189,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const setActiveWallet = useCallback((addr: string) => {
     setActiveWalletAddress(addr);
     try {
-      localStorage.setItem(STORAGE_KEY_ACTIVE, addr);
+      safeStorage.setItem(STORAGE_KEY_ACTIVE, addr);
     } catch {}
   }, []);
 

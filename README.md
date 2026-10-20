@@ -1,3 +1,5 @@
+![CI](https://github.com/ussyalfaks/ahjoorxmr-frontend/actions/workflows/ci.yml/badge.svg)
+
 # Ahjoor Frontend
 
 **Ahjoor** is a trustless community savings (ajo/esusu-style) platform built with transparency in mind. This repository contains the frontend application: a Next.js / React dashboard where savings circle organizers and participants manage circles, track contributions, and monitor payouts.
@@ -147,3 +149,22 @@ This project is licensed under the **MIT License**.
 Have questions or feedback?
 
 * [Telegram: Ahjoor Telegram Group](https://t.me/ahjoor)
+
+## Testing
+
+Run the automated test suite powered by Vitest and React Testing Library:
+
+```bash
+pnpm test          # Run all tests once
+pnpm test:watch    # Run tests in watch mode
+pnpm typecheck     # Run TypeScript type check
+```
+
+## Code Formatting & Pre-Commit Hooks
+
+Code formatting is enforced with Prettier and Tailwind CSS class sorting via Husky and lint-staged:
+
+```bash
+pnpm format        # Format all files
+pnpm format:check  # Check formatting without modifying
+```
