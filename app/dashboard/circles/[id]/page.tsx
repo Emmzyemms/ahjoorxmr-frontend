@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, X as XIcon, Settings, BarChart3, LogOut } from "lucide-react";
+import { ArrowLeft, Check, X as XIcon, Settings, BarChart3, LogOut, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import LeaveCircleModal from "@/components/modals/LeaveCircleModal";
 import { addNotification } from "@/lib/notifications";
@@ -32,6 +32,7 @@ import AutoPaySection from "@/components/circles/AutoPaySection";
 import { enableAutoPay, getAutoPayConfig, recordAutoPayAttempt } from "@/lib/autoPay";
 import CircleRulesView from "@/components/circles/CircleRulesView";
 import { CIRCLE_RULES_UPDATED_EVENT, getCircleRules, type CircleRulesRecord } from "@/lib/circleRules";
+import { getCircleFaq, CIRCLE_FAQ_UPDATED_EVENT, type FaqItem } from "@/lib/circleFaq";
 import CircleImage from "@/components/circles/CircleImage";
 import { DownloadAgreementButton } from "@/components/circles/DownloadAgreementButton";
 import type { ModerationEvent } from "@/types/discussion";
@@ -400,6 +401,8 @@ export default function CircleDetailPage({
     return () => window.removeEventListener(INVITES_UPDATED_EVENT, sync);
   }, [id]);
   const [circleRules, setCircleRules] = useState<CircleRulesRecord | null>(null);
+  const [circleFaq, setCircleFaq] = useState<FaqItem[]>(() => getCircleFaq(id));
+  const [openFaqId, setOpenFaqId] = useState<string | null>(null);
 
   useEffect(() => {
     setPayoutDraw(getPayoutDraw(id));
@@ -424,6 +427,13 @@ export default function CircleDetailPage({
     syncRules();
     window.addEventListener(CIRCLE_RULES_UPDATED_EVENT, syncRules);
     return () => window.removeEventListener(CIRCLE_RULES_UPDATED_EVENT, syncRules);
+  }, [id]);
+
+  useEffect(() => {
+    const syncFaq = () => setCircleFaq(getCircleFaq(id));
+    syncFaq();
+    window.addEventListener(CIRCLE_FAQ_UPDATED_EVENT, syncFaq);
+    return () => window.removeEventListener(CIRCLE_FAQ_UPDATED_EVENT, syncFaq);
   }, [id]);
 
   useEffect(() => {
@@ -764,6 +774,58 @@ export default function CircleDetailPage({
               </div>
             )}
           </div>
+        </section>
+
+        {/* Circle FAQ — Issue #246 */}
+        <section className="bg-[var(--content)] p-6 rounded-2xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold font-sora text-[var(--text)]">FAQ</h2>
+              <p className="text-xs text-[var(--muted)] mt-0.5">Answers to common questions from the organizer</p>
+            </div>
+            {canManageCircle && (
+              <Link href={`/dashboard/circles/${circle.id}/settings`} className="text-sm font-medium text-[#4B6B76] hover:underline">
+                Edit FAQ
+              </Link>
+            )}
+          </div>
+          {circleFaq.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[var(--ov-14)] bg-[var(--ov-05)] px-4 py-5 text-sm text-[var(--muted)]">
+              {canManageCircle ? (
+                <>
+                  <p>No FAQ items yet.</p>
+                  <Link href={`/dashboard/circles/${circle.id}/settings`} className="mt-2 inline-block font-medium text-[#4B6B76] hover:underline">
+                    Add FAQ
+                  </Link>
+                </>
+              ) : (
+                <p>The organizer has not published an FAQ yet.</p>
+              )}
+            </div>
+          ) : (
+            <ul className="divide-y divide-[var(--ov-14)] rounded-xl border border-[var(--ov-14)]">
+              {circleFaq.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqId(openFaqId === item.id ? null : item.id)}
+                    aria-expanded={openFaqId === item.id}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text)] hover:bg-[var(--ov-05)] transition-colors"
+                  >
+                    <span>{item.question}</span>
+                    <ChevronDown
+                      size={14}
+                      className={`shrink-0 transition-transform text-[var(--muted)] ${openFaqId === item.id ? "rotate-180" : ""}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {openFaqId === item.id && (
+                    <div className="px-4 pb-4 text-sm text-[var(--muted)]">{item.answer}</div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* Upcoming payout */}
