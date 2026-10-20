@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, LayoutGrid, List, Search, Star } from "lucide-react";
 import CreateCircleModal, { type CreateCircleData } from "@/components/modals/CreateCircleModal";
 import JoinCircleModal, { type JoinCircleData } from "@/components/modals/JoinCircleModal";
@@ -17,12 +18,10 @@ import { useCircleTags } from "@/hooks/useCircleTags";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
 import { useToast } from "@/components/ui/Toast";
 import { INVITE_REF_PARAM, markInviteStatus } from "@/lib/circleInvites";
-import {
-  MOCK_CIRCLES,
-  CURRENT_WALLET,
-  filterCirclesByQuery,
-  type DiscoverCircle,
-} from "@/data/circles";
+import { CURRENT_WALLET, filterCirclesByQuery, type DiscoverCircle } from "@/data/circles";
+import { useCircles } from "@/lib/hooks/useCircles";
+import { queryKeys } from "@/lib/queryKeys";
+import { SavingsCardSkeletonGrid } from "@/components/skeleton/SavingsCardSkeleton";
 
 // ---------------------------------------------------------------------------
 // View toggle button
@@ -153,7 +152,17 @@ function CirclesContent() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [duplicateValues, setDuplicateValues] = useState<Partial<CreateCircleData> | undefined>();
-  const [circles, setCircles] = useState(MOCK_CIRCLES);
+  const queryClient = useQueryClient();
+  // Circle list now comes from the typed API client (lib/api) via TanStack
+  // Query instead of a direct `data/circles.ts` import.
+  const { data: fetchedCircles, isLoading, isError } = useCircles();
+  // Circles created locally in this session (there is no real backend to
+  // persist them to) are layered on top of whatever the query returns.
+  const [localCircles, setLocalCircles] = useState<DiscoverCircle[]>([]);
+  const circles = useMemo(
+    () => [...localCircles, ...(fetchedCircles ?? [])],
+    [localCircles, fetchedCircles]
+  );
   const [joinCircle, setJoinCircle] = useState<JoinCircleData | null>(null);
   const [query, setQuery] = useState("");
 
@@ -206,7 +215,7 @@ function CirclesContent() {
      setCreateOpen(true);
    }
 
-   function duplicateCircle(circle: (typeof MOCK_CIRCLES)[number]) {
+   function duplicateCircle(circle: DiscoverCircle) {
     if (!requireVerified()) return;
      const contribution = circle.contribution.replace(/[^\d.]/g, "");
     const roundDuration = circle.duration.replace(/[^\d.]/g, "");
@@ -241,8 +250,11 @@ function CirclesContent() {
       penaltyType: data.penaltyType,
       penaltyValue: data.penaltyValue,
     };
-    setCircles((current) => [newCircle, ...current]);
+    setLocalCircles((current) => [newCircle, ...current]);
     setDuplicateValues(undefined);
+    // No real "create circle" endpoint yet; invalidating keeps the list in
+    // sync with the server once one exists, same as the join-circle flow.
+    queryClient.invalidateQueries({ queryKey: queryKeys.circles.all() });
   }
 
   const setTab = (t: Tab) => {
@@ -389,7 +401,22 @@ function CirclesContent() {
 
         {/* ---- Panel ---- */}
         <div id="circles-panel" role="tabpanel">
-          {displayCircles.length === 0 ? (
+          {isLoading ? (
+            <SavingsCardSkeletonGrid count={6} />
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center gap-2" role="alert">
+              <p className="text-[var(--muted)] text-base">
+                Couldn&apos;t load circles right now. Please try again.
+              </p>
+              <button
+                type="button"
+                onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.circles.all() })}
+                className="text-sm font-medium text-[#4B6B76] underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : displayCircles.length === 0 ? (
             <EmptyState tab={tab} hasQuery={query.length > 0} />
           ) : view === "grid" ? (
             /* Grid view */
@@ -446,11 +473,13 @@ function CirclesContent() {
         currentWallet={CURRENT_WALLET}
         onJoined={() => {
           if (inviteRef) markInviteStatus(inviteRef, "joined");
+          // Membership changed server-side (in a real backend) — refetch.
+          queryClient.invalidateQueries({ queryKey: queryKeys.circles.all() });
         }}
       />
-      <ComparisonFloatingBar allCircles={MOCK_CIRCLES} />
+      <ComparisonFloatingBar allCircles={circles} />
       <CircleComparison
-        allCircles={MOCK_CIRCLES}
+        allCircles={circles}
         onJoinCircle={(circle) => requestJoinCircle(circle)}
       />
     </>

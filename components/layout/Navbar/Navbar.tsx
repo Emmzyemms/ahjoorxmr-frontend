@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Copy, Check, ChevronDown, X, Search, KeyRound, Loader2 } from "lucide-react";
 import { useWallet, AVAILABLE_WALLETS, truncateAddress, type WalletId } from "@/contexts/WalletContext";
+import { APP_NETWORK, NETWORK_LABELS, type StellarNetwork } from "@/config/network";
 import { isPasskeySupported } from "@/lib/passkeys";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/components/ui/CommandPalette";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -135,6 +136,9 @@ function ConnectedDropdown({ address, onCopy, onDisconnect, onClose }: {
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { linkedWallets, setWalletNetwork } = useWallet();
+  const network = linkedWallets.find((w) => w.address === address)?.network ?? APP_NETWORK;
+  const mismatched = network !== APP_NETWORK;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -160,6 +164,26 @@ function ConnectedDropdown({ address, onCopy, onDisconnect, onClose }: {
         <div className="px-4 py-3 border-b border-[var(--ov-0f)]">
           <p className="text-xs text-[var(--muted)] mb-0.5">Connected</p>
           <p className="text-sm text-[var(--text)] font-mono">{truncateAddress(address)}</p>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className={`text-xs ${mismatched ? "font-semibold text-amber-400" : "text-[var(--muted)]"}`}>
+              Network: {NETWORK_LABELS[network]}
+              {mismatched && " (mismatch)"}
+            </span>
+            {/* #220: demo-only — there's no real wallet extension here
+                whose network could actually differ, so this is how the
+                guard gets exercised/tested. A real integration wouldn't
+                have this control; the wallet's own network just is
+                whatever it is. */}
+            <button
+              type="button"
+              onClick={() =>
+                setWalletNetwork(address, mismatched ? APP_NETWORK : (APP_NETWORK === "testnet" ? "mainnet" : "testnet") as StellarNetwork)
+              }
+              className="text-xs text-[#4B6B76] underline-offset-2 hover:underline"
+            >
+              {mismatched ? "Fix" : "Simulate mismatch"}
+            </button>
+          </div>
         </div>
         <button
           onClick={onCopy}

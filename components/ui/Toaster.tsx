@@ -38,8 +38,11 @@ export default function Toaster() {
                 {toast.action && (
                   <button
                     type="button"
-                    onClick={toast.action.onAction}
-                    className="mt-2 rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-white/20 text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76]"
+                    onClick={() => {
+                      toast.action?.onClick();
+                      dismissToast(toast.id);
+                    }}
+                    className={`mt-2 text-sm font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76] rounded ${styles.title}`}
                   >
                     {toast.action.label}
                   </button>

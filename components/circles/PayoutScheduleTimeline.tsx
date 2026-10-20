@@ -1,233 +1,165 @@
 "use client";
 
-/**
- * Issue #245 – Payout Schedule Timeline on Circle Detail Page
- *
- * Renders a vertical timeline of all circle rounds showing each
- * recipient, their scheduled payout date, and status (paid / current /
- * upcoming).  The current user's round is highlighted.  The list is
- * collapsible on mobile.
- */
-
 import { useState } from "react";
-import { CheckCircle2, Clock, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, Check, Clock, CircleDot } from "lucide-react";
+import { Avatar } from "@/components/circles/ParticipantList";
+import { truncateAddress } from "@/contexts/WalletContext";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+interface TimelineParticipant {
+  address: string;
+  slot: number;
+}
 
-export type RoundStatus = "paid" | "current" | "upcoming";
-
-export interface PayoutRound {
-  /** 1-based round number */
+interface RoundHistoryRow {
   round: number;
-  /** Display name or truncated address of the recipient */
   recipient: string;
-  /** Avatar URL; falls back to initials */
-  avatarUrl?: string;
-  /** ISO date string */
-  date: string;
-  status: RoundStatus;
-  /** Whether this round belongs to the viewing user */
-  isCurrentUser?: boolean;
+  amount: string;
+  completedAt: string;
 }
 
 interface PayoutScheduleTimelineProps {
-  rounds: PayoutRound[];
-  /** Hides collapse toggle – useful when already inside a collapsible panel */
-  alwaysExpanded?: boolean;
+  participants: TimelineParticipant[];
+  totalRounds: number;
+  currentRound: number;
+  contribution: string;
+  roundHistory: RoundHistoryRow[];
+  /** Deadline for the *current* round's payout, if known. */
+  nextPayoutDeadline?: Date | null;
+  /** Whose row to highlight — typically the signed-in wallet's address. */
+  currentUserAddress: string;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+type RoundStatus = "paid" | "current" | "upcoming";
 
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+interface ScheduleRound {
+  round: number;
+  recipient: string;
+  status: RoundStatus;
+  amount: string;
+  date: string | null;
 }
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
+// #244: the payout order isn't separately configured anywhere — it's
+// exactly the slot assignment every participant already has (the same
+// one `ParticipantList` sorts by), cycled if a circle somehow has more
+// rounds than participants (shouldn't normally happen, but this keeps
+// the schedule total rather than running off the end of the array).
+function buildSchedule(
+  participants: TimelineParticipant[],
+  totalRounds: number,
+  currentRound: number,
+  contribution: string,
+  roundHistory: RoundHistoryRow[],
+): ScheduleRound[] {
+  if (participants.length === 0) return [];
+  const bySlot = [...participants].sort((a, b) => a.slot - b.slot);
+  const historyByRound = new Map(roundHistory.map((row) => [row.round, row]));
+
+  return Array.from({ length: totalRounds }, (_, i) => {
+    const round = i + 1;
+    const recipient = bySlot[i % bySlot.length].address;
+    const history = historyByRound.get(round);
+    const status: RoundStatus = round < currentRound ? "paid" : round === currentRound ? "current" : "upcoming";
+    return {
+      round,
+      recipient: history?.recipient ?? recipient,
+      status,
+      amount: history?.amount ?? contribution,
+      date: history?.completedAt ?? null,
+    };
+  });
 }
 
-function StatusIcon({ status }: { status: RoundStatus }) {
-  switch (status) {
-    case "paid":
-      return (
-        <CheckCircle2
-          size={18}
-          aria-label="Paid"
-          className="text-emerald-400 flex-shrink-0"
-        />
-      );
-    case "current":
-      return (
-        <Zap
-          size={18}
-          aria-label="Current round"
-          className="text-amber-400 flex-shrink-0"
-        />
-      );
-    case "upcoming":
-    default:
-      return (
-        <Clock
-          size={18}
-          aria-label="Upcoming"
-          className="text-[#A1A1AA] flex-shrink-0"
-        />
-      );
-  }
-}
-
-function statusLabel(status: RoundStatus): string {
-  switch (status) {
-    case "paid":
-      return "Paid";
-    case "current":
-      return "Current";
-    case "upcoming":
-      return "Upcoming";
-  }
-}
-
-function statusBadgeClass(status: RoundStatus): string {
-  switch (status) {
-    case "paid":
-      return "bg-emerald-500/15 text-emerald-300";
-    case "current":
-      return "bg-amber-500/15 text-amber-300";
-    case "upcoming":
-      return "bg-white/5 text-[#A1A1AA]";
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const STATUS_CONFIG: Record<RoundStatus, { label: string; icon: typeof Check; dot: string; text: string }> = {
+  paid: { label: "Paid", icon: Check, dot: "bg-[var(--success)]", text: "text-[var(--success)]" },
+  current: { label: "Current", icon: CircleDot, dot: "bg-[#4B6B76]", text: "text-[#4B6B76]" },
+  upcoming: { label: "Upcoming", icon: Clock, dot: "bg-[var(--ov-14)]", text: "text-[var(--muted)]" },
+};
 
 export default function PayoutScheduleTimeline({
-  rounds,
-  alwaysExpanded = false,
+  participants,
+  totalRounds,
+  currentRound,
+  contribution,
+  roundHistory,
+  nextPayoutDeadline,
+  currentUserAddress,
 }: PayoutScheduleTimelineProps) {
-  const [expanded, setExpanded] = useState(true);
+  // #244: collapsed by default on mobile so the detail page's most
+  // important content (status, actions) isn't pushed below a long list
+  // on a small screen; desktop shows it open since there's room.
+  const [collapsed, setCollapsed] = useState(true);
+  const schedule = buildSchedule(participants, totalRounds, currentRound, contribution, roundHistory);
 
-  if (!rounds || rounds.length === 0) return null;
+  if (schedule.length === 0) return null;
 
   return (
-    <section aria-labelledby="payout-timeline-heading" className="w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3
-          id="payout-timeline-heading"
-          className="text-sm font-semibold text-[var(--foreground,#F4F4F5)]"
-        >
-          Payout Schedule
-        </h3>
-        {!alwaysExpanded && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-            aria-controls="payout-timeline-list"
-            className="flex items-center gap-1 text-xs text-[#A1A1AA] hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76] rounded sm:hidden"
-          >
-            {expanded ? (
-              <>
-                Collapse <ChevronUp size={14} aria-hidden="true" />
-              </>
-            ) : (
-              <>
-                Expand <ChevronDown size={14} aria-hidden="true" />
-              </>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Timeline */}
-      <ol
-        id="payout-timeline-list"
-        className={`relative flex flex-col gap-0 ${!alwaysExpanded && !expanded ? "hidden sm:flex" : "flex"}`}
+    <section className="rounded-lg border border-gray-200 bg-white dark:border-[var(--border)] dark:bg-[var(--content)]">
+      <button
+        type="button"
+        onClick={() => setCollapsed((c) => !c)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left md:cursor-default"
+        aria-expanded={!collapsed}
+        aria-controls="payout-schedule-list"
       >
-        {rounds.map((round, idx) => {
-          const isLast = idx === rounds.length - 1;
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-[var(--text)]">
+          Payout schedule{" "}
+          <span className="font-normal text-gray-500 dark:text-[var(--muted)]">
+            (round {currentRound} of {totalRounds})
+          </span>
+        </h2>
+        <ChevronDown
+          size={18}
+          aria-hidden="true"
+          className={`shrink-0 text-gray-400 transition-transform md:hidden dark:text-[var(--muted)] ${collapsed ? "" : "rotate-180"}`}
+        />
+      </button>
+
+      <ol
+        id="payout-schedule-list"
+        className={`space-y-0 border-t border-gray-100 px-4 py-4 dark:border-[var(--border)] ${collapsed ? "hidden md:block" : "block"}`}
+      >
+        {schedule.map((row, index) => {
+          const config = STATUS_CONFIG[row.status];
+          const Icon = config.icon;
+          const isYou = row.recipient.toLowerCase() === currentUserAddress.toLowerCase();
+          const isLast = index === schedule.length - 1;
 
           return (
-            <li
-              key={round.round}
-              className={`relative flex items-start gap-4 pl-0 ${
-                round.isCurrentUser
-                  ? "rounded-xl bg-[#4B6B76]/10 border border-[#4B6B76]/30 px-3 py-2.5 -mx-3"
-                  : "py-2"
-              }`}
-              aria-current={round.status === "current" ? "step" : undefined}
-            >
-              {/* Vertical connector */}
+            <li key={row.round} className="relative flex gap-3 pb-6 last:pb-0">
               {!isLast && (
                 <span
                   aria-hidden="true"
-                  className={`absolute left-[22px] top-[36px] h-full w-px ${
-                    round.status === "paid"
-                      ? "bg-emerald-500/30"
-                      : "bg-white/10"
-                  }`}
-                  style={{ bottom: 0 }}
+                  className="absolute left-[15px] top-8 h-[calc(100%-2rem)] w-px bg-gray-200 dark:bg-[var(--border)]"
                 />
               )}
+              <span
+                aria-hidden="true"
+                className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white ${config.dot}`}
+              >
+                <Icon size={14} aria-hidden="true" />
+              </span>
 
-              {/* Avatar */}
-              <div className="relative z-10 flex-shrink-0">
-                {round.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={round.avatarUrl}
-                    alt={round.recipient}
-                    className="h-10 w-10 rounded-full object-cover border border-white/10"
-                  />
-                ) : (
-                  <div
-                    aria-hidden="true"
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2A2A2A] border border-white/10 text-xs font-semibold text-[#A1A1AA] select-none"
-                  >
-                    {initials(round.recipient)}
+              <div
+                className={`flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 ${
+                  isYou ? "bg-[#4B6B76]/10 ring-1 ring-[#4B6B76]/30" : ""
+                }`}
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Avatar address={row.recipient} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900 dark:text-[var(--text)]">
+                      Round {row.round} · {truncateAddress(row.recipient)}
+                      {isYou && <span className="ml-1.5 text-xs font-semibold text-[#4B6B76]">(You)</span>}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
+                      {row.amount}
+                      {row.date ? ` · ${row.date}` : row.status === "current" && nextPayoutDeadline ? ` · due ${nextPayoutDeadline.toLocaleDateString()}` : ""}
+                    </p>
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* Content */}
-              <div className="flex flex-1 flex-col min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium text-[var(--foreground,#F4F4F5)] truncate">
-                    {round.recipient}
-                  </span>
-                  {round.isCurrentUser && (
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#4B6B76] border border-[#4B6B76]/40 rounded-full px-1.5 py-0.5 leading-none flex-shrink-0">
-                      You
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-xs text-[#A1A1AA]">
-                    Round {round.round} · {formatDate(round.date)}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5 leading-none ${statusBadgeClass(round.status)}`}
-                  >
-                    <StatusIcon status={round.status} />
-                    {statusLabel(round.status)}
-                  </span>
-                </div>
+                <span className={`shrink-0 text-xs font-semibold ${config.text}`}>{config.label}</span>
               </div>
             </li>
           );

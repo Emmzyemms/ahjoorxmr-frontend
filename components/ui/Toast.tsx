@@ -5,36 +5,27 @@ import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
 
 export type ToastVariant = "success" | "error" | "warning" | "info";
 
-/**
- * Issue #244 – Undo for Destructive Actions via Toast
- *
- * ToastInput now accepts an optional `action` slot.  When supplied the
- * toast renders a labelled button.  The action is committed (via
- * `onCommit`) only after the toast expires; clicking `onAction`
- * (the "Undo" button) cancels the commit and executes the undo handler
- * instead.
- */
+// #245: the action slot a toast can carry — most commonly "Undo" on a
+// destructive action, but generic so any toast can offer one.
 export interface ToastAction {
-  /** Label shown on the button, e.g. "Undo" */
   label: string;
-  /** Called when the user clicks the action button (undo path) */
-  onAction: () => void;
-  /** Called when the toast expires WITHOUT the action being triggered (commit path) */
-  onCommit?: () => void;
+  onClick: () => void;
 }
 
 export interface ToastInput {
   title: string;
   message?: string;
   variant?: ToastVariant;
-  /** Optional action / undo slot */
   action?: ToastAction;
+  /** Overrides AUTO_DISMISS_MS. Undo toasts use UNDO_TOAST_DURATION_MS (5s). */
+  durationMs?: number;
 }
 
 export interface ToastItem extends Required<Pick<ToastInput, "title">> {
   id: string;
   message?: string;
   variant: ToastVariant;
+  action?: ToastAction;
   phase: "entering" | "visible" | "leaving";
   action?: ToastAction;
 }
@@ -49,6 +40,12 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const AUTO_DISMISS_MS = 4000;
 const EXIT_ANIMATION_MS = 220;
+
+// #245: how long a destructive action stays undoable. The toast itself
+// visually expires on this same clock — "committed only after the toast
+// expires" means these two timers must be the same one, not independently
+// tuned numbers that can drift apart.
+export const UNDO_TOAST_DURATION_MS = 5000;
 
 function createToastId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -74,6 +71,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       title: toast.title,
       message: toast.message,
       variant: toast.variant ?? "info",
+      action: toast.action,
       phase: "entering",
       action: toast.action,
     };
@@ -124,7 +122,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       window.setTimeout(() => {
         setToasts((current) => current.filter((item) => item.id !== id));
       }, EXIT_ANIMATION_MS);
-    }, AUTO_DISMISS_MS);
+    }, toast.durationMs ?? AUTO_DISMISS_MS);
 
     return id;
   }, []);
