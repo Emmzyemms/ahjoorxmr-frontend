@@ -6,6 +6,7 @@
  * "clicking the link" is simulated by visiting /verify-email?token=...
  * Swap sendVerificationEmail's internals for a real API call once one exists.
  */
+import { isProduction } from "@/lib/env";
 
 const STORAGE_KEY = "ahjoor:email-verification";
 
@@ -129,7 +130,7 @@ export function getResendCooldownMs(): number {
 /** Dev-only: exposes the link that would otherwise be emailed, for local
  * testing without a mail server. Never surfaced in production. */
 export function getDevVerificationLink(): string | null {
-  if (process.env.NODE_ENV === "production") return null;
+  if (isProduction) return null;
   const state = getEmailVerificationState();
   return state.pendingToken ? `/verify-email?token=${state.pendingToken}` : null;
 }

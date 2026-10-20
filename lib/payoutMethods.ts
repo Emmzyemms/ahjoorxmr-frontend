@@ -1,4 +1,5 @@
 import type { PayoutMethodId, PayoutMethodOption, PayoutMethodPreference } from "@/types/payoutMethod";
+import { publicEnv } from "@/lib/env";
 
 /**
  * Off-ramp (crypto → bank) partner configuration. The integration itself is
@@ -6,8 +7,8 @@ import type { PayoutMethodId, PayoutMethodOption, PayoutMethodPreference } from 
  * wallet-only payouts everywhere.
  */
 export const OFFRAMP_CONFIG = {
-  enabled: process.env.NEXT_PUBLIC_OFFRAMP_ENABLED !== "false",
-  partnerName: process.env.NEXT_PUBLIC_OFFRAMP_PARTNER ?? "Bank transfer partner",
+  enabled: publicEnv.offrampEnabled,
+  partnerName: publicEnv.offrampPartner,
   supportedCurrencies: ["USDT", "USDC"],
   feeLabel: "~1% conversion fee",
 };
