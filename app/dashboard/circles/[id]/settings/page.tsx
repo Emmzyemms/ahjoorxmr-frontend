@@ -18,6 +18,15 @@ import { getCircleRules, saveCircleRules } from "@/lib/circleRules";
 import CircleImageUploader from "@/components/circles/CircleImageUploader";
 import { JOIN_REQUESTS_UPDATED_EVENT } from "@/lib/joinRequests";
 import CircleInvitePanel from "@/components/circles/CircleInvitePanel";
+import {
+  getCircleFaq,
+  addFaqItem,
+  updateFaqItem,
+  removeFaqItem,
+  reorderFaqItems,
+  type FaqItem,
+} from "@/lib/circleFaq";
+import { getParticipantProfile, getTrustScore } from "@/lib/participantProfile";
 
 const REQUESTS_KEY = "ahjoorxmr:circle-join-requests";
 const NOTIFICATIONS_KEY = "ahjoorxmr:notifications";
@@ -131,6 +140,12 @@ export default function CircleSettingsPage({
   const [showDrawModal, setShowDrawModal] = useState(false);
   const [payoutDraw, setPayoutDraw] = useState<PayoutDraw | null>(() => (circle ? getPayoutDraw(circle.id) : null));
   const [joinRequests, setJoinRequests] = useState<CircleJoinRequest[]>([]);
+
+  // FAQ state
+  const [faqItems, setFaqItems] = useState<FaqItem[]>(() => getCircleFaq(id));
+  const [faqQuestion, setFaqQuestion] = useState("");
+  const [faqAnswer, setFaqAnswer] = useState("");
+  const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -556,28 +571,131 @@ export default function CircleSettingsPage({
           <p className="text-sm text-[var(--muted)]">No join requests yet.</p>
         ) : (
           <ul className="divide-y divide-[var(--ov-14)] rounded-xl border border-[var(--ov-14)]">
-            {joinRequests.map((request) => (
-              <li key={request.id} className="space-y-3 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-sm text-[var(--text)]">{request.requester}</p>
-                    <p className="text-xs text-[var(--muted)]">{request.note || "No note provided"}</p>
+            {joinRequests.map((request) => {
+              const profile = getParticipantProfile(request.requester);
+              const trust = getTrustScore(profile);
+              const latePayments = profile.totalContributions - profile.onTimeContributions;
+              const hasWarning = latePayments >= 2 || trust.score < 65;
+              return (
+                <li key={request.id} className="space-y-3 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-sm text-[var(--text)]">{request.requester}</p>
+                      <p className="text-xs text-[var(--muted)]">{request.note || "No note provided"}</p>
+                    </div>
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${request.status === "pending" ? "bg-amber-500/15 text-amber-500" : request.status === "approved" ? "bg-green-500/15 text-green-500" : "bg-red-500/15 text-red-500"}`}>
+                      {request.status}
+                    </span>
                   </div>
-                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${request.status === "pending" ? "bg-amber-500/15 text-amber-500" : request.status === "approved" ? "bg-green-500/15 text-green-500" : "bg-red-500/15 text-red-500"}`}>
-                    {request.status}
-                  </span>
+                  {/* Reliability stats — Issue #242 */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="px-2 py-0.5 rounded-full bg-[var(--ov-0a)] text-[var(--muted)]">
+                      Trust: <strong className="text-[var(--text)]">{trust.score}/100</strong> · {trust.label}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[var(--ov-0a)] text-[var(--muted)]">
+                      Circles completed: <strong className="text-[var(--text)]">{profile.circlesCompleted}</strong>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[var(--ov-0a)] text-[var(--muted)]">
+                      Late payments: <strong className="text-[var(--text)]">{latePayments}</strong>
+                    </span>
+                    {hasWarning && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 font-medium">
+                        <ShieldAlert size={11} aria-hidden="true" /> Reliability warning
+                      </span>
+                    )}
+                    <a
+                      href={`/dashboard/profile?address=${request.requester}`}
+                      className="text-[#4B6B76] hover:underline"
+                    >
+                      View profile →
+                    </a>
+                  </div>
+                  {request.status === "pending" && (
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => updateRequest(request, "approved")} className="rounded-lg bg-[#4B6B76] px-3 py-2 text-xs font-medium text-white">Approve</button>
+                      <button type="button" onClick={() => updateRequest(request, "rejected")} className="rounded-lg border border-red-400 px-3 py-2 text-xs font-medium text-red-400">Reject</button>
+                    </div>
+                  )}
+                  {request.organizerNote && <p className="text-xs text-[var(--muted)]">Organizer note: {request.organizerNote}</p>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* Circle FAQ editor — Issue #246 */}
+      <section className="bg-[var(--content)] p-6 rounded-2xl space-y-4">
+        <div>
+          <h2 className="text-lg font-bold font-sora text-[var(--text)]">Circle FAQ</h2>
+          <p className="text-xs text-[var(--muted)] mt-1">
+            Publish answers to common member questions. Members see these on the circle page.
+          </p>
+        </div>
+        {faqItems.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">No FAQ items yet. Add the first one below.</p>
+        ) : (
+          <ul className="space-y-2">
+            {faqItems.map((item, idx) => (
+              <li key={item.id} className="rounded-xl border border-[var(--ov-14)] p-4 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-[var(--text)]">{item.question}</p>
+                  <div className="flex gap-1 shrink-0">
+                    {idx > 0 && (
+                      <button type="button" onClick={() => setFaqItems(reorderFaqItems(circle.id, idx, idx - 1))} className="text-xs text-[var(--muted)] px-1.5 py-0.5 rounded hover:bg-[var(--ov-0a)]">↑</button>
+                    )}
+                    {idx < faqItems.length - 1 && (
+                      <button type="button" onClick={() => setFaqItems(reorderFaqItems(circle.id, idx, idx + 1))} className="text-xs text-[var(--muted)] px-1.5 py-0.5 rounded hover:bg-[var(--ov-0a)]">↓</button>
+                    )}
+                    <button type="button" onClick={() => { setEditingFaqId(item.id); setFaqQuestion(item.question); setFaqAnswer(item.answer); }} className="text-xs text-[#4B6B76] px-1.5 py-0.5 rounded hover:bg-[var(--ov-0a)]">Edit</button>
+                    <button type="button" onClick={() => setFaqItems(removeFaqItem(circle.id, item.id))} className="text-xs text-red-400 px-1.5 py-0.5 rounded hover:bg-[var(--ov-0a)]">Remove</button>
+                  </div>
                 </div>
-                {request.status === "pending" && (
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => updateRequest(request, "approved")} className="rounded-lg bg-[#4B6B76] px-3 py-2 text-xs font-medium text-white">Approve</button>
-                    <button type="button" onClick={() => updateRequest(request, "rejected")} className="rounded-lg border border-red-400 px-3 py-2 text-xs font-medium text-red-400">Reject</button>
-                  </div>
-                )}
-                {request.organizerNote && <p className="text-xs text-[var(--muted)]">Organizer note: {request.organizerNote}</p>}
+                <p className="text-xs text-[var(--muted)]">{item.answer}</p>
               </li>
             ))}
           </ul>
         )}
+        <div className="space-y-2 pt-2 border-t border-[var(--ov-14)]">
+          <p className="text-xs font-medium text-[var(--muted)]">{editingFaqId ? "Edit item" : "Add new item"}</p>
+          <input
+            type="text"
+            value={faqQuestion}
+            onChange={(e) => setFaqQuestion(e.target.value)}
+            placeholder="Question"
+            className="w-full bg-[var(--ov-0a)] border border-[var(--ov-14)] rounded-xl px-3 py-2.5 text-[var(--text)] text-sm placeholder:text-[var(--faint)] focus:outline-none focus:ring-2 focus:ring-[#4B6B76]"
+          />
+          <textarea
+            value={faqAnswer}
+            onChange={(e) => setFaqAnswer(e.target.value)}
+            placeholder="Answer"
+            rows={3}
+            className="w-full bg-[var(--ov-0a)] border border-[var(--ov-14)] rounded-xl px-3 py-2.5 text-[var(--text)] text-sm placeholder:text-[var(--faint)] focus:outline-none focus:ring-2 focus:ring-[#4B6B76] resize-none"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!faqQuestion.trim() || !faqAnswer.trim()}
+              onClick={() => {
+                if (!faqQuestion.trim() || !faqAnswer.trim()) return;
+                if (editingFaqId) {
+                  setFaqItems(updateFaqItem(circle.id, editingFaqId, faqQuestion, faqAnswer));
+                  setEditingFaqId(null);
+                } else {
+                  setFaqItems(addFaqItem(circle.id, faqQuestion, faqAnswer));
+                }
+                setFaqQuestion("");
+                setFaqAnswer("");
+              }}
+              className="rounded-lg bg-[#4B6B76] px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {editingFaqId ? "Save changes" : "Add item"}
+            </button>
+            {editingFaqId && (
+              <button type="button" onClick={() => { setEditingFaqId(null); setFaqQuestion(""); setFaqAnswer(""); }} className="rounded-lg border border-[var(--ov-14)] px-3 py-2 text-xs text-[var(--muted)]">Cancel</button>
+            )}
+          </div>
+        </div>
       </section>
 
       {/* Pause / resume */}

@@ -5,26 +5,13 @@ import { MessageSquare } from "lucide-react";
 import type { Comment } from "@/types/discussion";
 import { ModerationMenu, RemovedMessagePlaceholder } from "./ModerationMenu";
 import { useCircleModeration } from "@/hooks/useCircleModeration";
+import RelativeTime from "@/components/ui/RelativeTime";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function truncateAddress(address: string): string {
   if (address.length <= 12) return address;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
-
-function getRelativeTime(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-  if (diffSec < 60) return rtf.format(-diffSec, "second");
-  if (diffMin < 60) return rtf.format(-diffMin, "minute");
-  if (diffHr < 24) return rtf.format(-diffHr, "hour");
-  return rtf.format(-diffDay, "day");
 }
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
@@ -113,12 +100,10 @@ function CommentItem({
               you
             </span>
           )}
-          <time
-            dateTime={comment.createdAt.toISOString()}
+          <RelativeTime
+            date={comment.createdAt}
             className="text-xs text-[var(--faint)] ml-auto shrink-0"
-          >
-            {getRelativeTime(comment.createdAt)}
-          </time>
+          />
         </div>
 
         <p className="mt-1 text-sm leading-relaxed text-[var(--muted)] break-words">
