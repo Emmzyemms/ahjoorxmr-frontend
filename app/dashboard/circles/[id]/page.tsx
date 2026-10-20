@@ -37,11 +37,10 @@ import CircleImage from "@/components/circles/CircleImage";
 import { DownloadAgreementButton } from "@/components/circles/DownloadAgreementButton";
 import type { ModerationEvent } from "@/types/discussion";
 import WaitlistPositionCard from "@/components/circles/WaitlistPositionCard";
-import PayoutScheduleTimeline from "@/components/circles/PayoutScheduleTimeline";
+import PayoutScheduleTimeline, { type PayoutRound } from "@/components/circles/PayoutScheduleTimeline";
 import PayoutMethodSelector from "@/components/circles/PayoutMethodSelector";
 import PayoutMethodBadge from "@/components/circles/PayoutMethodBadge";
 import { getCircleCurrency, isPayoutInProgress } from "@/lib/payoutMethods";
-import PayoutScheduleTimeline, { type PayoutRound } from "@/components/circles/PayoutScheduleTimeline";
 
 const CURRENT_WALLET = "0x23g43gdaa8f2c5b1e9d0f7a34bc6e12d8a9f5c3b";
 
