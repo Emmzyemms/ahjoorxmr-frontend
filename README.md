@@ -112,25 +112,17 @@ We welcome contributors of all experience levels!
 
 ### Branching strategy
 
-* `main` → stable release branch
-* `dev` → active development
-* `feature/*` → for individual features or fixes
+### Branching Strategy
 
 ### Code guidelines
 
-* Keep PRs small and focused
-* Write clear commit messages
-* Update docs when necessary
+### Commit Convention
 
 ### Commit convention
 
 We use **Conventional Commits** to standardize commit messages.
 
-* `feat`: new feature
-* `fix`: bug fix
-* `docs`: documentation only
-* `refactor`: code changes without feature/fix
-* `chore`: maintenance tasks
+---
 
 ---
 

@@ -28,6 +28,15 @@ function getQueryClient() {
   return browserQueryClient;
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60, // 1 minute
+      retry: 1,
+    },
+  },
+});
+
 const CONSENT_STORAGE_KEY = "cookie-consent";
 const CONSENT_VERSION = 1;
 
