@@ -1,20 +1,20 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
-import path from "path";
 
 export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: "jsdom",
-    globals: true,
-    setupFiles: ["./vitest.setup.ts"],
-    alias: {
-      "@": path.resolve(__dirname, "./"),
-    },
+  esbuild: {
+    jsx: "automatic",
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./"),
+      "@": fileURLToPath(new URL("./", import.meta.url)),
     },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./vitest.setup.ts"],
+    // Component tests only; lib/*.test.ts files use node:test and e2e/ is Playwright.
+    include: ["**/*.test.tsx"],
+    exclude: ["node_modules/**", ".next/**", "e2e/**"],
   },
 });

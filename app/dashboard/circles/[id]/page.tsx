@@ -268,8 +268,8 @@ const CIRCLES: Record<string, CircleDetail> = {
 };
 
 const STATUS_STYLES: Record<CircleDetail["status"], string> = {
-  active: "bg-green-500/10 text-green-600 dark:text-green-400",
-  pending: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  active: "bg-[var(--status-paid-bg)] text-[var(--status-paid)]",
+  pending: "bg-[var(--status-pending-bg)] text-[var(--status-pending)]",
   completed: "bg-[var(--ov-0a)] text-[var(--muted)]",
 };
 
@@ -308,8 +308,8 @@ function ParticipantRow({ participant }: { participant: Participant }) {
         </span>
         {participant.paid ? (
           <>
-            <Check size={14} className="text-green-600 dark:text-green-400" aria-hidden="true" />
-            <span className="text-xs text-green-600 dark:text-green-400">Paid</span>
+            <Check size={14} className="text-[var(--status-paid)]" aria-hidden="true" />
+            <span className="text-xs text-[var(--status-paid)]">Paid</span>
           </>
         ) : (
           <>
