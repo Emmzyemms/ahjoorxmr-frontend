@@ -22,9 +22,9 @@ const EXPIRY_OPTIONS: { value: InviteExpiry; label: string }[] = [
 ];
 
 const STATUS_STYLES: Record<string, string> = {
-  active: "text-green-600 dark:text-green-400",
+  active: "text-[var(--status-paid)]",
   expired: "text-[var(--muted)]",
-  revoked: "text-red-500",
+  revoked: "text-[var(--status-missed)]",
   exhausted: "text-[var(--muted)]",
 };
 

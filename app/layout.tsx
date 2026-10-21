@@ -15,6 +15,11 @@ export const metadata: Metadata = {
     description: "Decentralized savings circles powered by blockchain.",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ahjoor — Save With Friends",
+    description: "Decentralized savings circles powered by blockchain.",
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [
