@@ -14,6 +14,8 @@ import EmailVerificationBanner from "@/components/settings/EmailVerificationBann
 import { ConnectionStatusProvider } from "@/contexts/ConnectionStatusContext";
 import ConnectionStatusIndicator from "@/components/ui/ConnectionStatusIndicator";
 import StaleDataBanner from "@/components/ui/StaleDataBanner";
+import NetworkGuard from "@/components/wallet/NetworkGuard";
+import TrustlineBanner from "@/components/wallet/TrustlineBanner";
 
 const WALLET_ADDRESS = "0x23g43gdaa8f2c5b1e9d0f7a34bc6e12d8a9f5c3b";
 const WALLET_DISPLAY = "0x23g43gdaa...";
@@ -210,6 +212,8 @@ export default function DashboardLayout({
         </aside>
 
       {/* Main Content Area */}
+      {/* Issue #217 – Network mismatch guard wraps the entire dashboard */}
+      <NetworkGuard>
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top Header */}
         <header className="print:hidden flex items-center justify-end p-6 md:px-10 py-5 gap-3">
@@ -231,6 +235,8 @@ export default function DashboardLayout({
           <main className="flex-1 px-6 md:px-10 pb-10">
             <EmailVerificationBanner />
             <StaleDataBanner />
+            {/* Issue #220 – USDC trustline check banner */}
+            <TrustlineBanner address={WALLET_ADDRESS} />
             {children}
           </main>
 
@@ -240,6 +246,7 @@ export default function DashboardLayout({
         <FeedbackWidget />
         <ShortcutsModal />
       </div>
+      </NetworkGuard>
     </ConnectionStatusProvider>
   );
 }

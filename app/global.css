@@ -36,21 +36,27 @@
   --text: #101014;
   --muted: #5b5b68;
   --muted2: #3d3d47;
-  --faint: #a8a8b4;
+  /* Faint is used for secondary text (timestamps, captions, placeholders), so
+     it must still clear WCAG AA 4.5:1 on --card2, the darkest light surface. */
+  --faint: #676773;
   --nav-bg: rgba(255, 255, 255, 0.82);
   --white: #ffffff;
 
   /* Status text colors. The dark-theme values are bright and only legible on a
      dark surface, so light theme uses darkened equivalents. */
-  --success: #15803d;
+  --success: #166534;
   --info: #1d63c4;
 
-  /* Chart series colors. Each meets 3:1 contrast against --surface/--bg in
-     its theme (light: teal-700 ~5:1, accent ~4.5:1). */
-  --chart-1: #0f766e;
-  --chart-2: #6c5ce7;
-  --chart-grid: rgba(0, 0, 0, 0.08);
-  --chart-axis: rgba(0, 0, 0, 0.45);
+  /* Status badges (paid / on-time, late, pending, missed). Foregrounds are
+     checked against their own tint composited over --card2 and meet 4.5:1. */
+  --status-paid: #065f46;
+  --status-paid-bg: rgba(16, 185, 129, 0.12);
+  --status-late: #92400e;
+  --status-late-bg: rgba(245, 158, 11, 0.12);
+  --status-pending: #92400e;
+  --status-pending-bg: rgba(245, 158, 11, 0.12);
+  --status-missed: #991b1b;
+  --status-missed-bg: rgba(239, 68, 68, 0.12);
 
   /* Subtle tint overlays (hover states, dividers, faint fills) — black-based
      in light theme, white-based in dark theme. Suffix matches the alpha hex
@@ -98,15 +104,19 @@ html.high-contrast.dark {
   --text: #eeeef8;
   --muted: #a1a1aa;
   --muted2: #c0c0c0;
-  --faint: #555555;
+  --faint: #94949f;
   --nav-bg: rgba(10, 10, 15, 0.82);
   --success: #4ADE80;
   --info: #8FC7FF;
 
-  --chart-1: #5EEAD4;
-  --chart-2: #8B5CF6;
-  --chart-grid: rgba(255, 255, 255, 0.06);
-  --chart-axis: rgba(255, 255, 255, 0.45);
+  --status-paid: #34d399;
+  --status-paid-bg: rgba(16, 185, 129, 0.15);
+  --status-late: #fbbf24;
+  --status-late-bg: rgba(245, 158, 11, 0.15);
+  --status-pending: #fbbf24;
+  --status-pending-bg: rgba(245, 158, 11, 0.15);
+  --status-missed: #fca5a5;
+  --status-missed-bg: rgba(239, 68, 68, 0.15);
 
   --ov-03: rgba(255, 255, 255, 0.012);
   --ov-05: rgba(255, 255, 255, 0.02);
