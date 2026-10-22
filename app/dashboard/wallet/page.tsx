@@ -24,6 +24,7 @@ import TwoFactorChallengeModal from "@/components/settings/TwoFactorChallengeMod
 import LowBalanceAlertBanner, { LowBalanceAlertSettings } from "@/components/wallet/LowBalanceAlert";
 import { isTwoFactorEnabled } from "@/lib/twoFactor";
 import BalanceBreakdownWidget from "@/components/wallet/BalanceBreakdownWidget";
+import { FriendbotButton } from "@/components/wallet/FriendbotButton";
 
 type TransactionType = "contribution" | "payout" | "join";
 
@@ -153,6 +154,7 @@ function getExplorerUrl(txHash: string, network = "starknet"): string {
 
 export default function WalletPage() {
   const { linkedWallets, activeWalletAddress, setActiveWallet, isConnected, disconnect, connect } = useWallet();
+  const activeWallet = linkedWallets.find((w) => w.address === activeWalletAddress) ?? null;
   const [selectedFilter, setSelectedFilter] = useState<TransactionType | "all">("all");
   const [walletToRemove, setWalletToRemove] = useState<string | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
@@ -246,6 +248,9 @@ export default function WalletPage() {
           <div className="h-px bg-[var(--ov-1a)] w-40" aria-hidden="true" />
         </div>
       </div>
+
+      {/* Friendbot Testnet Funding – only visible on testnet when a wallet is connected */}
+      <FriendbotButton className="mb-2" />
 
       {/* Low Balance Alert Banner */}
       {activeWallet && (
