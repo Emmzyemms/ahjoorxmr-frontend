@@ -1,3 +1,4 @@
+import { safeStorage } from "@/lib/safeStorage";
 /**
  * Email verification for new signups.
  *
@@ -39,7 +40,7 @@ const DEFAULT_STATE: EmailVerificationState = {
 export function getEmailVerificationState(): EmailVerificationState {
   if (typeof window === "undefined") return DEFAULT_STATE;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STATE;
     return { ...DEFAULT_STATE, ...JSON.parse(raw) };
   } catch {
@@ -49,7 +50,7 @@ export function getEmailVerificationState(): EmailVerificationState {
 
 function saveState(state: EmailVerificationState) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    safeStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     window.dispatchEvent(new Event(EMAIL_VERIFICATION_EVENT));
   } catch {
     // ignore storage errors
